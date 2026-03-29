@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotify Clone</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root { --spotify-green: #1DB954; }
+    body { background: #000; }
+    .loading { 
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .nav-btn.active {
+      background-color: rgba(29, 185, 84, 0.1);
+      color: var(--spotify-green);
+    }
+    .nav-btn.active .text-xs {
+      color: var(--spotify-green);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white bg-black flex flex-col">
+  <!-- Login Page -->
+  <div id="loginPage" class="min-h-screen flex items-center justify-center px-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-lg p-8 w-full max-w-md">
+      <h1 class="text-3xl font-bold text-center mb-2" style="color:var(--spotify-green)">Spotify Clone</h1>
+      <p class="text-gray-400 text-center mb-8">Music Library</p>
+
+      <!-- Login Form -->
+      <div id="loginForm">
+        <form id="emailLoginForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Email</label>
+            <input 
+              type="email" 
+              id="loginEmail" 
+              required
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500"
+              placeholder="your@email.com"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Password</label>
+            <input 
+              type="password" 
+              id="loginPassword" 
+              required
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500"
+              placeholder="••••••••"
+            />
+          </div>
+          <button 
+            type="submit" 
+            class="w-full py-2 rounded-md font-semibold text-black transition"
+            style="background: var(--spotify-green)"
+          >
+            Login
+          </button>
+        </form>
+
+        <div class="relative my-6">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-700"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-gray-900 text-gray-400">Or continue with</span>
+          </div>
+        </div>
+
+        <!-- Google OAuth Button -->
+        <div id="googleLoginDiv" class="mb-6"></div>
+
+        <!-- Toggle to Register -->
+        <p class="text-center text-gray-400 text-sm">
+          Don't have an account? 
+          <button id="toggleRegister" type="button" class="text-green-400 hover:text-green-300 font-semibold">
+            Sign up
+          </button>
+        </p>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerForm" class="hidden">
+        <form id="emailRegisterForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Username</label>
+            <input 
+              type="text" 
+              id="registerUsername" 
+              required
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500"
+              placeholder="your username"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Email</label>
+            <input 
+              type="email" 
+              id="registerEmail" 
+              required
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500"
+              placeholder="your@email.com"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Password</label>
+            <input 
+              type="password" 
+              id="registerPassword" 
+              required
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500"
+              placeholder="••••••••"
+            />
+          </div>
+          <button 
+            type="submit" 
+            class="w-full py-2 rounded-md font-semibold text-black transition" 
+            style="background: var(--spotify-green)"
+          >
+            Create Account
+          </button>
+        </form>
+
+        <!-- Toggle to Login -->
+        <p class="text-center text-gray-400 text-sm mt-6">
+          Already have an account? 
+          <button id="toggleLogin" type="button" class="text-green-400 hover:text-green-300 font-semibold">
+            Sign in
+          </button>
+        </p>
+      </div>
+
+      <!-- Error Message -->
+      <div id="errorMessage" class="hidden mt-4 p-3 bg-red-900 border border-red-700 rounded-md text-red-200 text-sm"></div>
+    </div>
+  </div>
+
+  <!-- App Page (shown after login) -->
+  <div id="appPage" class="hidden min-h-screen flex flex-col">
+    <header class="p-6 border-b border-gray-800">
+      <div class="max-w-5xl mx-auto flex items-center justify-between">
+        <h1 class="text-2xl font-bold" style="color:var(--spotify-green)">Spotify Clone</h1>
+        <div class="flex items-center space-x-4">
+          <span id="userDisplay" class="text-sm text-gray-300"></span>
+          <button 
+            id="logoutBtn" 
+            class="px-3 py-1 rounded text-sm font-semibold bg-gray-800 hover:bg-gray-700 transition"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-5xl mx-auto w-full p-6 pb-24 overflow-y-auto">
+      <style>
+        /* Library track card layout enhancements */
+        #tracks > div, #moodTracks > div, #searchResults > div {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+        }
+        #tracks, #moodTracks, #searchResults {
+          max-height: calc(100vh - 350px);
+          overflow-y: auto;
+        }
+        #tracks::-webkit-scrollbar, #moodTracks::-webkit-scrollbar, #searchResults::-webkit-scrollbar {
+          width: 8px;
+        }
+        #tracks::-webkit-scrollbar-thumb, #moodTracks::-webkit-scrollbar-thumb, #searchResults::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.15);
+          border-radius: 999px;
+        }
+        .track-actions {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+      </style>
+      <!-- Dashboard Section -->
+      <section id="dashboard" class="space-y-6">
+        <h2 class="text-2xl mb-4">Dashboard</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <h3 class="text-lg font-semibold mb-2">Recently Played</h3>
+            <p class="text-gray-400">Your recently played tracks</p>
+            <div id="recentTracks" class="mt-4 space-y-2">
+              <!-- Recent tracks will be inserted here -->
+            </div>
+          </div>
+          <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <h3 class="text-lg font-semibold mb-2">Your Playlists</h3>
+            <p class="text-gray-400">Create and manage playlists</p>
+            <button id="createPlaylistBtn" class="mt-4 px-4 py-2 rounded font-semibold text-black" style="background: var(--spotify-green)">
+              Create Playlist
+            </button>
+            <div id="playlists" class="mt-4 space-y-2 text-sm text-gray-300">
+              <!-- Playlists appear here -->
+            </div>
+            <div id="playlistDetail" class="mt-4 p-3 bg-gray-800 rounded border border-gray-700 hidden">
+              <div class="flex items-center justify-between mb-2">
+                <div id="playlistDetailName" class="font-semibold"></div>
+                <button id="closePlaylistDetail" class="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">Close</button>
+              </div>
+              <div id="playlistTracks" class="space-y-2"></div>
+            </div>
+
+      <!-- Modal Overlay -->
+      <div id="appModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-gray-900 text-white rounded-lg shadow-xl w-11/12 sm:w-3/4 md:w-1/2 p-6">
+          <div class="flex items-start justify-between mb-4">
+            <h3 id="modalTitle" class="text-lg font-bold"></h3>
+            <button id="modalClose" class="text-gray-300 hover:text-white">✕</button>
+          </div>
+          <div id="modalBody" class="space-y-4"></div>
+          <div class="mt-4 flex justify-end gap-2">
+            <button id="modalCancel" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600">Cancel</button>
+            <button id="modalConfirm" class="px-4 py-2 rounded bg-emerald-500 text-black font-semibold hover:bg-emerald-400">Confirm</button>
+          </div>
+        </div>
+      </div>
+          </div>
+          <div class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <h3 class="text-lg font-semibold mb-2">Statistics</h3>
+            <p class="text-gray-400">Your listening stats</p>
+            <div class="mt-4 text-sm text-gray-300">
+              <div>Total tracks: <span id="totalTracks">0</span></div>
+              <div>Play time: <span id="playTime">0h 0m</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Library Section -->
+      <section id="library" class="space-y-4 hidden">
+        <h2 class="text-xl mb-3">Your Library</h2>
+        <div id="tracks" class="space-y-2">
+          <!-- Tracks will be inserted here -->
+        </div>
+      </section>
+
+      <!-- Mood Selection Section -->
+      <section id="mood" class="space-y-4 hidden">
+        <h2 class="text-xl mb-3">Select Your Mood</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <button class="mood-btn bg-red-900 hover:bg-red-800 p-6 rounded-lg border border-gray-700 transition" data-mood="energetic">
+            <div class="text-2xl mb-2">⚡</div>
+            <div class="font-semibold">Energetic</div>
+          </button>
+          <button class="mood-btn bg-blue-900 hover:bg-blue-800 p-6 rounded-lg border border-gray-700 transition" data-mood="calm">
+            <div class="text-2xl mb-2">🌊</div>
+            <div class="font-semibold">Calm</div>
+          </button>
+          <button class="mood-btn bg-green-900 hover:bg-green-800 p-6 rounded-lg border border-gray-700 transition" data-mood="happy">
+            <div class="text-2xl mb-2">😊</div>
+            <div class="font-semibold">Happy</div>
+          </button>
+          <button class="mood-btn bg-purple-900 hover:bg-purple-800 p-6 rounded-lg border border-gray-700 transition" data-mood="melancholic">
+            <div class="text-2xl mb-2">🌧️</div>
+            <div class="font-semibold">Melancholic</div>
+          </button>
+          <button class="mood-btn bg-yellow-900 hover:bg-yellow-800 p-6 rounded-lg border border-gray-700 transition" data-mood="focus">
+            <div class="text-2xl mb-2">🎯</div>
+            <div class="font-semibold">Focus</div>
+          </button>
+          <button class="mood-btn bg-pink-900 hover:bg-pink-800 p-6 rounded-lg border border-gray-700 transition" data-mood="romantic">
+            <div class="text-2xl mb-2">💕</div>
+            <div class="font-semibold">Romantic</div>
+          </button>
+          <button class="mood-btn bg-indigo-900 hover:bg-indigo-800 p-6 rounded-lg border border-gray-700 transition" data-mood="party">
+            <div class="text-2xl mb-2">🎉</div>
+            <div class="font-semibold">Party</div>
+          </button>
+          <button class="mood-btn bg-gray-900 hover:bg-gray-800 p-6 rounded-lg border border-gray-700 transition" data-mood="chill">
+            <div class="text-2xl mb-2">🛋️</div>
+            <div class="font-semibold">Chill</div>
+          </button>
+        </div>
+        <div class="flex justify-end mb-3">
+          <button id="createMoodPlaylistBtn" class="px-4 py-2 bg-green-500 text-black rounded font-semibold">Create playlist from mood</button>
+        </div>
+        <div id="moodTracks" class="mt-6 space-y-2">
+          <!-- Mood-based tracks will be inserted here -->
+        </div>
+      </section>
+
+      <!-- Search Section -->
+      <section id="search" class="space-y-4 hidden">
+        <h2 class="text-xl mb-3">Search Tracks</h2>
+        <div class="flex gap-2">
+          <input id="searchInput" type="text" placeholder="Search by title or artist" class="flex-1 px-3 py-2 rounded bg-gray-800 border border-gray-700 focus:border-green-500 outline-none text-white" />
+          <button id="searchBtn" class="px-4 py-2 rounded font-semibold text-black" style="background: var(--spotify-green)">Search</button>
+        </div>
+        <div id="searchResults" class="space-y-2"></div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 py-2 px-6">
+      <div class="max-w-5xl mx-auto flex items-center justify-around">
+        <button id="navDashboard" class="nav-btn flex flex-col items-center p-2 rounded-lg transition active" data-section="dashboard">
+          <div class="text-xl mb-1">🏠</div>
+          <div class="text-xs">Home</div>
+        </button>
+        <button id="navLibrary" class="nav-btn flex flex-col items-center p-2 rounded-lg transition" data-section="library">
+          <div class="text-xl mb-1">📚</div>
+          <div class="text-xs">Library</div>
+        </button>
+        <button id="navMood" class="nav-btn flex flex-col items-center p-2 rounded-lg transition" data-section="mood">
+          <div class="text-xl mb-1">🎵</div>
+          <div class="text-xs">Mood</div>
+        </button>
+        <button id="navSearch" class="nav-btn flex flex-col items-center p-2 rounded-lg transition" data-section="search">
+          <div class="text-xl mb-1">🔍</div>
+          <div class="text-xs">Search</div>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Persistent player -->
+    <div id="playerBar" class="fixed bottom-16 left-0 right-0 bg-gray-900 border-t border-gray-800 py-3 px-6">
+      <div class="max-w-5xl mx-auto flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div id="nowPlaying" class="text-sm text-gray-300">Not playing</div>
+        </div>
+        <audio id="audio" controls class="w-96" preload="none"></audio>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BASE = 'http://127.0.0.1:8000';
+    
+    // DOM Elements
+    const loginPage = document.getElementById('loginPage');
+    const appPage = document.getElementById('appPage');
+    const emailLoginForm = document.getElementById('emailLoginForm');
+    const emailRegisterForm = document.getElementById('emailRegisterForm');
+    const errorMessage = document.getElementById('errorMessage');
+    const toggleRegister = document.getElementById('toggleRegister');
+    const toggleLogin = document.getElementById('toggleLogin');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userDisplay = document.getElementById('userDisplay');
+    const tracksContainer = document.getElementById('tracks');
+    const audio = document.getElementById('audio');
+    const nowPlaying = document.getElementById('nowPlaying');
+    
+    // Navigation elements
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const sections = {
+      dashboard: document.getElementById('dashboard'),
+      library: document.getElementById('library'),
+      mood: document.getElementById('mood'),
+      search: document.getElementById('search')
+    };
+    const moodButtons = document.querySelectorAll('.mood-btn');
+    const recentTracksContainer = document.getElementById('recentTracks');
+    const moodTracksContainer = document.getElementById('moodTracks');
+    const totalTracksSpan = document.getElementById('totalTracks');
+    const playTimeSpan = document.getElementById('playTime');
+    const createPlaylistBtn = document.getElementById('createPlaylistBtn');
+    const playlistsContainer = document.getElementById('playlists');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchResults = document.getElementById('searchResults');
+
+    let allTracksData = [];
+    let currentPlaylists = [];
+    let currentPlaylistId = null;
+    let lastMoodTracks = [];
+
+    const appModal = document.getElementById('appModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalConfirm = document.getElementById('modalConfirm');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalClose = document.getElementById('modalClose');
+
+    function openModal(title, bodyHtml, confirmText = 'Confirm', onConfirm = null) {
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHtml;
+      modalConfirm.textContent = confirmText;
+      appModal.classList.remove('hidden');
+      appModal.setAttribute('aria-hidden', 'false');
+
+      const cleanup = () => {
+        modalConfirm.onclick = null;
+        modalCancel.onclick = null;
+        modalClose.onclick = null;
+        appModal.classList.add('hidden');
+        appModal.setAttribute('aria-hidden', 'true');
+      };
+
+      modalCancel.onclick = cleanup;
+      modalClose.onclick = cleanup;
+      modalConfirm.onclick = () => {
+        if (typeof onConfirm === 'function') onConfirm();
+        cleanup();
+      };
+    }
+
+    function closeModal() {
+      appModal.classList.add('hidden');
+      appModal.setAttribute('aria-hidden', 'true');
+    }
+    // Get token from localStorage
+    function getToken() {
+      return localStorage.getItem('spotifyToken');
+    }
+
+    // Save token to localStorage
+    function saveToken(token) {
+      localStorage.setItem('spotifyToken', token);
+    }
+
+    // Remove token from localStorage
+    function removeToken() {
+      localStorage.removeItem('spotifyToken');
+    }
+
+    // Check if user is logged in
+    function isLoggedIn() {
+      return !!getToken();
+    }
+
+    // Show error message
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove('hidden');
+      setTimeout(() => {
+        errorMessage.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Show login page and load app if already logged in
+    async function initializeApp() {
+      if (isLoggedIn()) {
+        await switchToApp();
+      } else {
+        switchToLogin();
+      }
+    }
+
+    // Switch to app view
+    async function switchToApp() {
+      try {
+        const token = getToken();
+        const res = await fetch(`${BASE}/auth/user?token=${token}`);
+        if (!res.ok) throw new Error('Failed to fetch user');
+        const user = await res.json();
+        
+        userDisplay.textContent = `${user.username || user.email}`;
+        loginPage.classList.add('hidden');
+        appPage.classList.remove('hidden');
+        await fetchTracks();
+        await fetchPlaylists();
+        showSection('dashboard'); // Start with dashboard
+      } catch (err) {
+        showError('Session expired. Please log in again.');
+        removeToken();
+        switchToLogin();
+      }
+    }
+
+    // Navigation functions
+    function showSection(sectionName) {
+      // Hide all sections
+      Object.values(sections).forEach(section => {
+        section.classList.add('hidden');
+      });
+      
+      // Remove active class from all nav buttons
+      navButtons.forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Show selected section
+      if (sections[sectionName]) {
+        sections[sectionName].classList.remove('hidden');
+      }
+      
+      // Add active class to corresponding nav button
+      const activeBtn = document.querySelector(`[data-section="${sectionName}"]`);
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+      }
+      
+      // Load section-specific data
+      if (sectionName === 'dashboard') {
+        loadDashboardData();
+      }
+    }
+
+    // Load dashboard data
+    async function loadDashboardData() {
+      try {
+        const res = await fetch(`${BASE}/tracks`);
+        if (!res.ok) throw new Error('Failed to fetch tracks');
+        const tracks = await res.json();
+        
+        // Update total tracks count
+        totalTracksSpan.textContent = tracks.length;
+        
+        // Show recent tracks (first 5)
+        const recentTracks = tracks.slice(0, 5);
+        renderRecentTracks(recentTracks);
+        
+        // Calculate play time (mock calculation)
+        const totalMinutes = tracks.length * 3; // Assume 3 minutes per track
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        playTimeSpan.textContent = `${hours}h ${minutes}m`;
+        
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      }
+    }
+
+    // Render recent tracks for dashboard
+    function renderRecentTracks(tracks) {
+      if (!tracks || tracks.length === 0) {
+        recentTracksContainer.innerHTML = '<div class="text-gray-400 text-sm">No recent tracks</div>';
+        return;
+      }
+
+      recentTracksContainer.innerHTML = '';
+      tracks.forEach(track => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between text-sm';
+        
+        const info = document.createElement('div');
+        info.innerHTML = `<div class="font-medium text-gray-300">${escapeHtml(track.title)}</div><div class="text-gray-500">${escapeHtml(track.artist)}</div>`;
+        
+        const playBtn = document.createElement('button');
+        playBtn.textContent = '▶';
+        playBtn.className = 'text-green-400 hover:text-green-300 ml-2';
+        playBtn.onclick = () => playTrack(track.id, track.title, track.artist);
+        
+        item.appendChild(info);
+        item.appendChild(playBtn);
+        recentTracksContainer.appendChild(item);
+      });
+    }
+
+    // Switch to login view
+    function switchToLogin() {
+      loginPage.classList.remove('hidden');
+      appPage.classList.add('hidden');
+    }
+
+    // Email Login
+    emailLoginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch(`${BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.detail || 'Login failed');
+        }
+
+        const data = await res.json();
+        saveToken(data.token);
+        await switchToApp();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    // Email Register
+    emailRegisterForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('registerUsername').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+
+      if (!username || !email || !password) {
+        showError('Username, email, and password are required.');
+        return;
+      }
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters long.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BASE}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, username })
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.detail || 'Registration failed');
+        }
+
+        const data = await res.json();
+        saveToken(data.token);
+        await switchToApp();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    // Google OAuth
+    function handleCredentialResponse(response) {
+      const token = response.credential;
+      
+      fetch(`${BASE}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.requires_registration) {
+          // Show Google registration form with pre-filled data
+          showGoogleRegistrationForm(data.google_data);
+        } else if (data.token) {
+          // User exists, login successful
+          saveToken(data.token);
+          switchToApp();
+        } else {
+          throw new Error(data.detail || 'Google login failed');
+        }
+      })
+      .catch(err => {
+        showError(err.message);
+      });
+    }
+
+    // Show Google registration form
+    function showGoogleRegistrationForm(googleData) {
+      // Hide login form and show Google registration
+      loginForm.classList.add('hidden');
+      registerForm.classList.add('hidden');
+      
+      // Create Google registration form
+      const googleRegisterForm = document.createElement('div');
+      googleRegisterForm.id = 'googleRegisterForm';
+      googleRegisterForm.innerHTML = `
+        <h3 class="text-lg font-semibold mb-4 text-center">Complete Your Registration</h3>
+        <form id="googleRegisterFormInner" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Username</label>
+            <input 
+              type="text" 
+              id="googleUsername" 
+              required
+              value="${escapeHtml(googleData.name || '')}"
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500"
+              placeholder="Choose a username"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Email (from Google)</label>
+            <input 
+              type="email" 
+              value="${escapeHtml(googleData.email)}"
+              disabled
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-400 cursor-not-allowed"
+            />
+          </div>
+          <button 
+            type="submit" 
+            class="w-full py-2 rounded-md font-semibold text-black transition"
+            style="background: var(--spotify-green)"
+          >
+            Complete Registration
+          </button>
+        </form>
+        <button 
+          id="backToLogin" 
+          class="w-full mt-4 py-2 rounded-md font-semibold bg-gray-700 hover:bg-gray-600 transition"
+        >
+          Back to Login
+        </button>
+      `;
+      
+      // Replace the form container content
+      document.getElementById('loginForm').parentNode.appendChild(googleRegisterForm);
+      
+      // Handle Google registration form submission
+      document.getElementById('googleRegisterFormInner').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('googleUsername').value;
+        
+        try {
+          const res = await fetch(`${BASE}/auth/google/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              google_id: googleData.google_id,
+              email: googleData.email,
+              username: username
+            })
+          });
+
+          if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.detail || 'Registration failed');
+          }
+
+          const data = await res.json();
+          saveToken(data.token);
+          googleRegisterForm.remove(); // Remove the Google form
+          switchToApp();
+        } catch (err) {
+          showError(err.message);
+        }
+      });
+      
+      // Handle back to login
+      document.getElementById('backToLogin').addEventListener('click', () => {
+        googleRegisterForm.remove();
+        loginForm.classList.remove('hidden');
+      });
+    }
+
+    window.onload = function () {
+      google.accounts.id.initialize({
+        client_id: '821874390575-56kprcb31knja35g3rc8skkrcg94h25u.apps.googleusercontent.com',
+        callback: handleCredentialResponse
+      });
+      
+      google.accounts.id.renderButton(
+        document.getElementById('googleLoginDiv'),
+        { 
+          theme: 'dark',
+          size: 'large',
+          width: '320'
+        }
+      );
+
+      initializeApp();
+    };
+
+    // Toggle between login and register forms
+    toggleRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      loginForm.classList.add('hidden');
+      registerForm.classList.remove('hidden');
+    });
+
+    toggleLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      registerForm.classList.add('hidden');
+      loginForm.classList.remove('hidden');
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+      removeToken();
+      switchToLogin();
+      emailLoginForm.reset();
+      emailRegisterForm.reset();
+      errorMessage.classList.add('hidden');
+    });
+
+    // Navigation event listeners
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.dataset.section;
+        if (section && sections[section]) {
+          showSection(section);
+        }
+      });
+    });
+
+    // Mood selection event listeners
+    moodButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const mood = btn.dataset.mood;
+        await fetchTracksByMood(mood);
+      });
+    });
+
+    // Modal helpers are set up earlier in the script; reusing the existing openModal implementation.
+
+    // Create playlist
+    if (createPlaylistBtn) {
+      createPlaylistBtn.addEventListener('click', async () => {
+        openModal('Create Playlist', '<input id="newPlaylistName" class="w-full p-2 rounded bg-gray-800 border border-gray-700" placeholder="Playlist name" />', async () => {
+          const nameInput = document.getElementById('newPlaylistName');
+          const name = nameInput?.value?.trim();
+          if (!name) {
+            showError('Please enter a playlist name.');
+            return;
+          }
+          const token = getToken();
+          if (!token) {
+            showError('Not authenticated');
+            return;
+          }
+
+          const response = await fetch(`${BASE}/playlists?token=${encodeURIComponent(token)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+          });
+
+          if (!response.ok) {
+            showError('Failed to create playlist');
+            return;
+          }
+
+          await fetchPlaylists();
+          showSection('dashboard');
+        });
+      });
+    } else {
+      console.warn('Create playlist button not found in DOM');
+    }
+
+    // Search
+    searchBtn.addEventListener('click', () => {
+      const query = searchInput.value.trim();
+      searchTracks(query);
+    });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const query = searchInput.value.trim();
+        searchTracks(query);
+      }
+    });
+
+    // Create playlist from mood
+    const createMoodPlaylistBtn = document.getElementById('createMoodPlaylistBtn');
+    createMoodPlaylistBtn.addEventListener('click', async () => {
+      if (!lastMoodTracks || !lastMoodTracks.length) {
+        showError('No mood tracks available. Click a mood button first.');
+        return;
+      }
+
+      const name = prompt('Enter playlist name for mood result');
+      if (!name || !name.trim()) return;
+
+      const token = getToken();
+      const response = await fetch(`${BASE}/playlists/from_mood?token=${encodeURIComponent(token)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), track_ids: lastMoodTracks.map(t => t.id) })
+      });
+
+      if (!response.ok) {
+        showError('Failed to create mood playlist');
+        return;
+      }
+
+      await fetchPlaylists();
+      showSection('dashboard');
+    });
+
+    // Fetch and display tracks
+    async function fetchTracks() {
+      try {
+        const res = await fetch(`${BASE}/tracks`);
+        if (!res.ok) throw new Error('Failed to fetch tracks');
+        const tracks = await res.json();
+        allTracksData = tracks;
+        renderTracks(tracks);
+        renderPlaylists();
+      } catch (err) {
+        tracksContainer.innerHTML = `<div class="text-red-400">Could not load tracks: ${err.message}</div>`;
+      }
+    }
+
+    function renderTracks(tracks) {
+      if (!tracks || tracks.length === 0) {
+        tracksContainer.innerHTML = '<div class="text-gray-400">No tracks found.</div>';
+        return;
+      }
+
+      tracksContainer.innerHTML = '';
+      tracks.forEach(track => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between bg-gray-900 p-3 rounded-md border border-gray-800';
+
+        const info = document.createElement('div');
+        info.innerHTML = `<div class="font-medium">${escapeHtml(track.title)}</div><div class="text-sm text-gray-400">${escapeHtml(track.artist)}</div>`;
+
+        const actions = document.createElement('div');
+        const playBtn = document.createElement('button');
+        playBtn.textContent = 'Play';
+        playBtn.className = 'px-3 py-1 rounded text-black font-semibold';
+        playBtn.style.background = 'var(--spotify-green)';
+        playBtn.onclick = () => playTrack(track.id, track.title, track.artist);
+
+        const addBtn = document.createElement('button');
+        addBtn.textContent = 'Add to Playlist';
+        addBtn.className = 'ml-2 px-3 py-1 rounded text-black font-semibold';
+        addBtn.style.background = 'var(--spotify-blue, #4f46e5)';
+        addBtn.onclick = async () => {
+          if (currentPlaylists.length === 0) {
+            showError('Please create a playlist first.');
+            return;
+          }
+          const playlistOptions = currentPlaylists.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+          openModal('Add to Playlist', `<div class="space-y-2"><p>Select playlist:</p><select id="selectPlaylist" class="w-full p-2 rounded bg-gray-800 border border-gray-700">${playlistOptions}</select></div>`, async () => {
+            const select = document.getElementById('selectPlaylist');
+            if (!select || !select.value) {
+              showError('Please select a playlist.');
+              return;
+            }
+            const playlistId = select.value;
+            const token = getToken();
+            const response = await fetch(`${BASE}/playlists/${playlistId}/tracks?token=${encodeURIComponent(token)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ track_id: track.id })
+            });
+            if (!response.ok) {
+              showError('Failed to add track to playlist');
+              return;
+            }
+            if (currentPlaylistId === Number(playlistId)) {
+              showPlaylistDetails(Number(playlistId));
+            }
+          });
+        };
+
+        actions.appendChild(playBtn);
+        actions.appendChild(addBtn);
+        item.appendChild(info);
+        item.appendChild(actions);
+        tracksContainer.appendChild(item);
+      });
+    }
+
+    // Fetch tracks by mood (mock implementation)
+    async function fetchTracksByMood(mood) {
+      try {
+        const res = await fetch(`${BASE}/tracks`);
+        if (!res.ok) throw new Error('Failed to fetch tracks');
+        const allTracks = await res.json();
+        
+        let filteredTracks = [];
+        switch (mood) {
+          case 'energetic':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('rock') || 
+              track.title.toLowerCase().includes('dance') ||
+              track.artist.toLowerCase().includes('rock')
+            );
+            break;
+          case 'calm':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('piano') || 
+              track.title.toLowerCase().includes('ambient') ||
+              track.artist.toLowerCase().includes('classical')
+            );
+            break;
+          case 'happy':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('pop') || 
+              track.title.toLowerCase().includes('happy') ||
+              track.artist.toLowerCase().includes('pop')
+            );
+            break;
+          case 'melancholic':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('sad') || 
+              track.title.toLowerCase().includes('blue') ||
+              track.artist.toLowerCase().includes('blues')
+            );
+            break;
+          case 'focus':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('classical') || 
+              track.title.toLowerCase().includes('instrumental') ||
+              track.artist.toLowerCase().includes('bach')
+            );
+            break;
+          case 'romantic':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('love') || 
+              track.title.toLowerCase().includes('romance') ||
+              track.artist.toLowerCase().includes('ballad')
+            );
+            break;
+          case 'party':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('party') || 
+              track.title.toLowerCase().includes('dance') ||
+              track.artist.toLowerCase().includes('disco')
+            );
+            break;
+          case 'chill':
+            filteredTracks = allTracks.filter(track => 
+              track.title.toLowerCase().includes('chill') || 
+              track.title.toLowerCase().includes('relax') ||
+              track.artist.toLowerCase().includes('lofi')
+            );
+            break;
+          default:
+            filteredTracks = allTracks.slice(0, 10);
+        }
+        
+        if (filteredTracks.length === 0) {
+          filteredTracks = allTracks.slice(0, Math.min(10, allTracks.length));
+        }
+        
+        lastMoodTracks = filteredTracks;
+        renderMoodTracks(filteredTracks, mood);
+      } catch (err) {
+        moodTracksContainer.innerHTML = `<div class="text-red-400">Could not load mood tracks: ${err.message}</div>`;
+      }
+    }
+
+    function renderMoodTracks(tracks, mood) {
+      if (!tracks || tracks.length === 0) {
+        moodTracksContainer.innerHTML = '<div class="text-gray-400">No tracks found for this mood.</div>';
+        return;
+      }
+
+      moodTracksContainer.innerHTML = `<h3 class="text-lg mb-4 capitalize">${mood} Tracks</h3>`;
+      tracks.forEach(track => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between bg-gray-900 p-3 rounded-md border border-gray-800';
+
+        const info = document.createElement('div');
+        info.innerHTML = `<div class="font-medium">${escapeHtml(track.title)}</div><div class="text-sm text-gray-400">${escapeHtml(track.artist)}</div>`;
+
+        const actions = document.createElement('div');
+        const playBtn = document.createElement('button');
+        playBtn.textContent = 'Play';
+        playBtn.className = 'px-3 py-1 rounded text-black font-semibold';
+        playBtn.style.background = 'var(--spotify-green)';
+        playBtn.onclick = () => playTrack(track.id, track.title, track.artist);
+
+        const addBtn = document.createElement('button');
+        addBtn.textContent = 'Add';
+        addBtn.className = 'ml-2 px-3 py-1 rounded text-black font-semibold';
+        addBtn.style.background = 'var(--spotify-blue, #4f46e5)';
+        addBtn.onclick = async () => {
+          if (currentPlaylists.length === 0) {
+            showError('Please create a playlist first.');
+            return;
+          }
+          const targetPlaylistId = currentPlaylists[0].id;
+          const token = getToken();
+          const res = await fetch(`${BASE}/playlists/${targetPlaylistId}/tracks?token=${encodeURIComponent(token)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ track_id: track.id })
+          });
+          if (!res.ok) { showError('Failed to add track'); return; }
+          if (currentPlaylistId === targetPlaylistId) {
+            showPlaylistDetails(targetPlaylistId);
+          }
+        };
+
+        actions.appendChild(playBtn);
+        actions.appendChild(addBtn);
+        item.appendChild(info);
+        item.appendChild(actions);
+        moodTracksContainer.appendChild(item);
+      });
+    }
+
+    async function fetchPlaylists() {
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${BASE}/playlists?token=${encodeURIComponent(token)}`);
+        if (!res.ok) throw new Error('Failed to fetch playlists');
+        currentPlaylists = await res.json();
+        renderPlaylists();
+      } catch (err) {
+        playlistsContainer.innerHTML = `<div class="text-red-400">Could not load playlists: ${err.message}</div>`;
+      }
+    }
+
+    async function renderPlaylists() {
+      if (!currentPlaylists || currentPlaylists.length === 0) {
+        playlistsContainer.innerHTML = '<div class="text-gray-400">No playlists yet. Create one to start!</div>';
+        return;
+      }
+
+      playlistsContainer.innerHTML = '';
+      currentPlaylists.forEach((list) => {
+        const el = document.createElement('div');
+        el.className = 'flex items-center justify-between bg-gray-800 p-2 rounded border border-gray-700';
+        el.innerHTML = `
+          <div class="text-sm cursor-pointer" title="Open playlist">${escapeHtml(list.name)}</div>
+          <div class="flex gap-2">
+            <button class="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">Open</button>
+            <button class="text-xs px-2 py-1 rounded bg-red-700 hover:bg-red-600">Delete</button>
+          </div>
+        `;
+
+        const openBtn = el.querySelectorAll('button')[0];
+        const deleteBtn = el.querySelectorAll('button')[1];
+
+        openBtn.addEventListener('click', () => {
+          showPlaylistDetails(list.id);
+        });
+
+        deleteBtn.addEventListener('click', async () => {
+          const token = getToken();
+          if (!token) return;
+          const response = await fetch(`${BASE}/playlists/${list.id}?token=${encodeURIComponent(token)}`, {method: 'DELETE'});
+          if (!response.ok) {
+            showError('Failed to delete playlist');
+            return;
+          }
+          if (currentPlaylistId === list.id) {
+            currentPlaylistId = null;
+            playlistDetail.classList.add('hidden');
+          }
+          await fetchPlaylists();
+        });
+
+        playlistsContainer.appendChild(el);
+      });
+    }
+
+    async function showPlaylistDetails(playlistId) {
+      const token = getToken();
+      if (!token) return;
+      const res = await fetch(`${BASE}/playlists/${playlistId}?token=${encodeURIComponent(token)}`);
+      if (!res.ok) {
+        showError('Could not load playlist');
+        return;
+      }
+      const data = await res.json();
+      currentPlaylistId = playlistId;
+      playlistDetailName.textContent = `${data.name} (${data.tracks.length} tracks)`;
+      playlistTracks.innerHTML = '';
+
+      if (!data.tracks.length) {
+        playlistTracks.innerHTML = '<div class="text-gray-400">Playlist is empty.</div>';
+      } else {
+        data.tracks.forEach((track) => {
+          const item = document.createElement('div');
+          item.className = 'flex items-center justify-between bg-gray-900 p-2 rounded border border-gray-800';
+          item.innerHTML = `
+            <div>
+              <div class="font-medium">${escapeHtml(track.title)}</div>
+              <div class="text-sm text-gray-400">${escapeHtml(track.artist)}</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="text-xs px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">Play</button>
+              <button class="text-xs px-2 py-1 rounded bg-red-700 hover:bg-red-600">Remove</button>
+            </div>
+          `;
+          const playBtn = item.querySelector('button');
+          const removeBtn = item.querySelectorAll('button')[1];
+
+          playBtn.addEventListener('click', () => playTrack(track.id, track.title, track.artist));
+          removeBtn.addEventListener('click', async () => {
+            const response = await fetch(`${BASE}/playlists/${playlistId}/tracks/${track.id}?token=${encodeURIComponent(token)}`, {method: 'DELETE'});
+            if (!response.ok) {
+              showError('Failed to remove track');
+              return;
+            }
+            showPlaylistDetails(playlistId);
+          });
+
+          playlistTracks.appendChild(item);
+        });
+      }
+      playlistDetail.classList.remove('hidden');
+    }
+
+    // close button for playlist detail panel
+    const playlistDetail = document.getElementById('playlistDetail');
+    const playlistDetailName = document.getElementById('playlistDetailName');
+    const playlistTracks = document.getElementById('playlistTracks');
+    const closePlaylistDetail = document.getElementById('closePlaylistDetail');
+    closePlaylistDetail.addEventListener('click', () => {
+      playlistDetail.classList.add('hidden');
+      currentPlaylistId = null;
+    });
+
+    function searchTracks(query) {
+      const clean = (query || '').trim().toLowerCase();
+      if (!clean) {
+        searchResults.innerHTML = '<div class="text-gray-400">Type a term and click Search.</div>';
+        return;
+      }
+
+      const results = allTracksData.filter(t =>
+        t.title.toLowerCase().includes(clean) || t.artist.toLowerCase().includes(clean)
+      );
+
+      if (!results.length) {
+        searchResults.innerHTML = `<div class="text-gray-400">No tracks found for "${escapeHtml(query)}".</div>`;
+        return;
+      }
+
+      searchResults.innerHTML = '';
+      results.forEach(track => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between bg-gray-900 p-3 rounded-md border border-gray-800';
+        item.innerHTML = `<div><div class="font-medium">${escapeHtml(track.title)}</div><div class="text-sm text-gray-400">${escapeHtml(track.artist)}</div></div>`;
+        const playBtn = document.createElement('button');
+        playBtn.textContent = 'Play';
+        playBtn.className = 'px-3 py-1 rounded text-black font-semibold';
+        playBtn.style.background = 'var(--spotify-green)';
+        playBtn.onclick = () => playTrack(track.id, track.title, track.artist);
+        item.appendChild(playBtn);
+        searchResults.appendChild(item);
+      });
+    }
+
+    function playTrack(id, title, artist) {
+      const src = `${BASE}/stream/${id}`;
+      audio.src = src;
+      audio.play().catch(e => {
+        alert('Playback failed: ' + e.message);
+      });
+      nowPlaying.textContent = `${title} — ${artist}`;
+    }
+
+    // Basic HTML escaping
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>
